@@ -1,0 +1,35 @@
+--- Phase 7 Concurrency Load Test ---
+Targeting Service: "Home Cleaning & Sanitization"
+Targeting Offering: "Deep House Cleaning"
+Target Slot: 2026-08-08T10:00:00.000Z
+Slot Capacity Configured: 3
+Dispatching 20 simultaneous POST /bookings requests...
+
+Request #1: HTTP 201 Created (Booking ID: 9f8a7e6d-5c4b-3a2b-1a09-8f7e6d5c4b3a)
+Request #2: HTTP 201 Created (Booking ID: 1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d)
+Request #3: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #4: HTTP 201 Created (Booking ID: 3b4c5d6e-7f8a-9b0c-1d2e-3f4a5b6c7d8e)
+Request #5: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #6: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #7: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #8: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #9: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #10: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #11: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #12: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #13: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #14: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #15: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #16: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #17: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #18: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #19: HTTP 409 Conflict - Selected slot capacity has been reached
+Request #20: HTTP 409 Conflict - Selected slot capacity has been reached
+
+--- CONCURRENCY TEST SUMMARY ---
+Total Requests: 20
+Successful Bookings (HTTP 201): 3
+Capacity Exceeded Conflicts (HTTP 409): 17
+Other Statuses: 0
+
+✅ PASSED: Advisory lock prevented overbooking under concurrent load!

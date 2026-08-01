@@ -12,6 +12,7 @@ import {
   SearchIcon,
   LogInIcon,
   UserPlusIcon,
+  CalendarIcon,
 } from 'lucide-react';
 
 export function Navbar() {
@@ -50,8 +51,25 @@ export function Navbar() {
               <span>Browse Services</span>
             </Link>
 
+            {user?.role.type === 'CUSTOMER' && (
+              <Link
+                href="/account/bookings"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
+              >
+                <CalendarIcon className="w-4 h-4" />
+                <span>My Bookings</span>
+              </Link>
+            )}
+
             {user?.role.type === 'ADMIN' && (
               <>
+                <Link
+                  href="/admin/bookings"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
+                >
+                  <CalendarIcon className="w-4 h-4" />
+                  <span>Bookings</span>
+                </Link>
                 <Link
                   href="/admin/categories"
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
@@ -78,6 +96,13 @@ export function Navbar() {
 
             {user?.role.type === 'VENDOR' && (
               <>
+                <Link
+                  href="/vendor/bookings"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
+                >
+                  <CalendarIcon className="w-4 h-4" />
+                  <span>Bookings</span>
+                </Link>
                 <Link
                   href="/vendor/services"
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"

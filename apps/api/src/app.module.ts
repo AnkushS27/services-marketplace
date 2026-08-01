@@ -11,6 +11,7 @@ import { VendorsModule } from './modules/vendors/vendors.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { ServicesModule } from './modules/services/services.module';
 import { AvailabilityModule } from './modules/availability/availability.module';
+import { BookingsModule } from './modules/bookings/bookings.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 
@@ -32,6 +33,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     CategoriesModule,
     ServicesModule,
     AvailabilityModule,
+    BookingsModule,
   ],
   controllers: [AppController],
   providers: [

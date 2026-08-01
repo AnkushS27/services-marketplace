@@ -3,12 +3,21 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getPublicServiceDetail, ServiceData } from '@/lib/api/services';
+import { useAuth } from '@/lib/auth-context';
+import { getPublicServiceDetail, ServiceData, OfferingData } from '@/lib/api/services';
+import { createBooking, PaymentMode } from '@/lib/api/bookings';
 import { SlotPicker } from '@/components/shared/slot-picker';
 import { DerivedSlotData } from '@/lib/api/availability';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { toast } from '@/components/ui/toast';
 import {
   ArrowLeftIcon,
@@ -23,17 +32,26 @@ import {
   SparklesIcon,
   MapPinIcon,
   GlobeIcon,
+  CreditCardIcon,
+  WalletIcon,
+  Loader2Icon,
 } from 'lucide-react';
 
 export default function PublicServiceDetailPage() {
   const params = useParams();
   const router = useRouter();
   const serviceId = params.id as string;
+  const { user } = useAuth();
 
   const [service, setService] = useState<ServiceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOfferingId, setSelectedOfferingId] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<DerivedSlotData | null>(null);
+
+  // Booking Modal State
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('PAY_NOW');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     async function loadServiceDetail() {
@@ -67,6 +85,71 @@ export default function PublicServiceDetailPage() {
       loadServiceDetail();
     }
   }, [serviceId]);
+
+  const selectedOffering: OfferingData | undefined = service?.offerings?.find(
+    (o) => o.id === selectedOfferingId,
+  );
+
+  const handleProceedClick = () => {
+    if (!user) {
+      toast.add({
+        title: 'Authentication Required',
+        description: 'Please log in or sign up to book a service appointment.',
+        type: 'error',
+      });
+      router.push(`/login?redirect=/services/${serviceId}`);
+      return;
+    }
+
+    if (!selectedOfferingId || !selectedSlot) {
+      toast.add({
+        title: 'Selection Required',
+        description: 'Please select an offering package and appointment slot.',
+        type: 'error',
+      });
+      return;
+    }
+
+    setIsBookingModalOpen(true);
+  };
+
+  const handleConfirmBooking = async () => {
+    if (!selectedOfferingId || !selectedSlot) return;
+
+    setIsSubmitting(true);
+    try {
+      const res = await createBooking({
+        serviceId,
+        offeringId: selectedOfferingId,
+        slotStart: selectedSlot.slotStart,
+        paymentMode,
+      });
+
+      if (res.success && res.data) {
+        toast.add({
+          title: 'Booking Created Successfully!',
+          description: 'Your appointment slot has been reserved.',
+          type: 'success',
+        });
+        setIsBookingModalOpen(false);
+        router.push(`/account/bookings/${res.data.id}`);
+      } else {
+        toast.add({
+          title: 'Booking Failed',
+          description: res.error?.message || 'Could not reserve slot.',
+          type: 'error',
+        });
+      }
+    } catch (err: any) {
+      toast.add({
+        title: 'Booking Error',
+        description: err?.message || 'Failed to create booking',
+        type: 'error',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -324,13 +407,7 @@ export default function PublicServiceDetailPage() {
               className="w-full font-bold gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-11"
               size="lg"
               disabled={!selectedOfferingId || !selectedSlot}
-              onClick={() => {
-                toast.add({
-                  title: 'Slot Reserved!',
-                  description: 'Booking creation & payment state machine will land in Phase 7!',
-                  type: 'info',
-                });
-              }}
+              onClick={handleProceedClick}
             >
               <CalendarIcon className="w-4 h-4" />
               <span>{selectedSlot ? 'Proceed to Book' : 'Select a Slot Above'}</span>
@@ -338,6 +415,114 @@ export default function PublicServiceDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Booking Confirmation Dialog */}
+      <Dialog open={isBookingModalOpen} onOpenChange={setIsBookingModalOpen}>
+        <DialogContent className="max-w-md p-6 rounded-2xl">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5 text-primary" />
+              <span>Confirm Appointment</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Review your appointment summary and select your payment preference.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Booking Summary Box */}
+            <div className="p-4 rounded-xl bg-secondary/50 border border-border space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Service:</span>
+                <span className="font-bold text-foreground">{service.title}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Package:</span>
+                <span className="font-bold text-foreground">{selectedOffering?.name}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Duration:</span>
+                <span className="font-medium text-foreground">{selectedOffering?.durationMinutes} mins</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Date & Time:</span>
+                <span className="font-medium text-foreground">
+                  {selectedSlot &&
+                    new Date(selectedSlot.slotStart).toLocaleString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                </span>
+              </div>
+              <div className="border-t border-border pt-2 flex justify-between items-center text-sm">
+                <span className="font-bold text-foreground">Total Price:</span>
+                <span className="font-extrabold text-primary flex items-center">
+                  <IndianRupeeIcon className="w-4 h-4" />
+                  {selectedOffering ? (selectedOffering.priceMinorUnits / 100).toLocaleString('en-IN') : 0}
+                </span>
+              </div>
+            </div>
+
+            {/* Payment Mode Selection */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-foreground block">
+                Payment Option
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <div
+                  className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-2 text-xs ${
+                    paymentMode === 'PAY_NOW'
+                      ? 'border-primary bg-primary/10 font-bold'
+                      : 'border-border bg-card hover:border-primary/40'
+                  }`}
+                  onClick={() => setPaymentMode('PAY_NOW')}
+                >
+                  <CreditCardIcon className="w-4 h-4 text-primary shrink-0" />
+                  <div>
+                    <p className="text-foreground font-semibold">Pay Online Now</p>
+                    <p className="text-[10px] text-muted-foreground">Instant payment</p>
+                  </div>
+                </div>
+
+                <div
+                  className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-2 text-xs ${
+                    paymentMode === 'PAY_AFTER'
+                      ? 'border-primary bg-primary/10 font-bold'
+                      : 'border-border bg-card hover:border-primary/40'
+                  }`}
+                  onClick={() => setPaymentMode('PAY_AFTER')}
+                >
+                  <WalletIcon className="w-4 h-4 text-primary shrink-0" />
+                  <div>
+                    <p className="text-foreground font-semibold">Pay After Service</p>
+                    <p className="text-[10px] text-muted-foreground">Cash / Direct</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              className="w-full font-bold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-11 mt-4"
+              disabled={isSubmitting}
+              onClick={handleConfirmBooking}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2Icon className="w-4 h-4 animate-spin" />
+                  <span>Reserving Slot...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2Icon className="w-4 h-4" />
+                  <span>Confirm & Reserve Booking</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
