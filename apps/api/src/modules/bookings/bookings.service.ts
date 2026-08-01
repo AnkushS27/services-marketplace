@@ -14,7 +14,7 @@ import {
   RescheduleBookingDto,
 } from './dto/bookings.dto';
 import { CurrentUserPayload } from '../../common/decorators/current-user.decorator';
-import { BookingStatus, PaymentMode, PaymentStatus, Prisma } from '@prisma/client';
+import { BookingStatus, PaymentMode, PaymentStatus, PaymentEventType, Prisma } from '@prisma/client';
 import { DateTime } from 'luxon';
 
 @Injectable()
@@ -343,7 +343,18 @@ export class BookingsService {
       throw new NotFoundException('Booking not found');
     }
 
-    return booking;
+    const isPayAfterUnpaid =
+      booking.paymentMode === PaymentMode.PAY_AFTER &&
+      (!booking.payment || booking.payment.status !== PaymentStatus.SUCCESS);
+
+    const outstandingBalanceMinorUnits = isPayAfterUnpaid
+      ? booking.priceMinorUnits
+      : 0;
+
+    return {
+      ...booking,
+      outstandingBalanceMinorUnits,
+    };
   }
 
   /**
@@ -643,6 +654,7 @@ export class BookingsService {
       where: { id },
       include: {
         service: { include: { vendorProfile: true } },
+        payment: true,
       },
     });
 
@@ -730,6 +742,25 @@ export class BookingsService {
           reason: dto?.reason || 'Booking cancelled',
         },
       });
+
+      // Automated refund if payment was SUCCESS
+      if (booking.payment && booking.payment.status === PaymentStatus.SUCCESS) {
+        await tx.payment.update({
+          where: { id: booking.payment.id },
+          data: { status: PaymentStatus.REFUNDED },
+        });
+
+        await tx.paymentEvent.create({
+          data: {
+            paymentId: booking.payment.id,
+            type: PaymentEventType.REFUNDED,
+            metadata: {
+              reason: dto?.reason || 'Booking cancelled',
+              actorUserId: user.userId,
+            },
+          },
+        });
+      }
 
       return updated;
     });

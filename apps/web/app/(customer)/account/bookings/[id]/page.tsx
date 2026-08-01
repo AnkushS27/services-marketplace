@@ -43,10 +43,14 @@ import {
   Loader2Icon,
 } from 'lucide-react';
 
+import { useAuth } from '@/lib/auth-context';
+import { confirmPayment, adminRefundPayment } from '@/lib/api/payments';
+
 export default function CustomerBookingDetailPage() {
   const params = useParams();
   const router = useRouter();
   const bookingId = params.id as string;
+  const { user, hasPermission } = useAuth();
 
   const [booking, setBooking] = useState<BookingData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,6 +65,16 @@ export default function CustomerBookingDetailPage() {
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [newSelectedSlot, setNewSelectedSlot] = useState<DerivedSlotData | null>(null);
   const [isRescheduling, setIsRescheduling] = useState(false);
+
+  // Payment Dialog
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [paymentToken, setPaymentToken] = useState<'tok_success' | 'tok_fail' | 'tok_delay'>('tok_success');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Admin Refund Dialog
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [refundReason, setRefundReason] = useState('');
+  const [isRefunding, setIsRefunding] = useState(false);
 
   const fetchBooking = async () => {
     setIsLoading(true);
@@ -144,6 +158,72 @@ export default function CustomerBookingDetailPage() {
       });
     } finally {
       setIsRescheduling(false);
+    }
+  };
+
+  const handlePaymentSubmit = async () => {
+    setIsProcessingPayment(true);
+    try {
+      const res = await confirmPayment(bookingId, paymentToken);
+      if (res.success && res.data) {
+        toast.add({
+          title: res.data.status === 'SUCCESS' ? 'Payment Successful!' : `Payment Status: ${res.data.status}`,
+          description: res.data.status === 'SUCCESS'
+            ? 'Your payment was processed successfully.'
+            : res.data.status === 'FAILED'
+            ? 'Payment failed. The booking slot has been released.'
+            : 'Payment is pending async resolution.',
+          type: res.data.status === 'SUCCESS' ? 'success' : res.data.status === 'FAILED' ? 'error' : 'info',
+        });
+        setIsPayModalOpen(false);
+        fetchBooking();
+      } else {
+        toast.add({
+          title: 'Payment Error',
+          description: res.error?.message || 'Failed to process payment.',
+          type: 'error',
+        });
+      }
+    } catch (err: any) {
+      toast.add({
+        title: 'Error',
+        description: err?.message || 'Payment processing failed',
+        type: 'error',
+      });
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const handleRefundSubmit = async () => {
+    if (!refundReason.trim()) return;
+    setIsRefunding(true);
+    try {
+      const res = await adminRefundPayment(bookingId, refundReason);
+      if (res.success) {
+        toast.add({
+          title: 'Payment Refunded',
+          description: 'Payment status updated to REFUNDED.',
+          type: 'success',
+        });
+        setIsRefundModalOpen(false);
+        setRefundReason('');
+        fetchBooking();
+      } else {
+        toast.add({
+          title: 'Refund Failed',
+          description: res.error?.message || 'Could not process refund.',
+          type: 'error',
+        });
+      }
+    } catch (err: any) {
+      toast.add({
+        title: 'Error',
+        description: err?.message || 'Refund processing failed',
+        type: 'error',
+      });
+    } finally {
+      setIsRefunding(false);
     }
   };
 
@@ -363,6 +443,16 @@ export default function CustomerBookingDetailPage() {
             </CardHeader>
 
             <CardContent className="px-0 space-y-3">
+              {booking.paymentMode === 'PAY_NOW' && booking.payment?.status !== 'SUCCESS' && booking.status === 'PENDING' && (
+                <Button
+                  className="w-full justify-start gap-2 font-bold text-xs h-10 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={() => setIsPayModalOpen(true)}
+                >
+                  <CreditCardIcon className="w-4 h-4" />
+                  <span>Complete Online Payment</span>
+                </Button>
+              )}
+
               {isModifyAllowed ? (
                 <>
                   <Button
@@ -387,6 +477,17 @@ export default function CustomerBookingDetailPage() {
                 <p className="text-xs text-muted-foreground italic">
                   This booking is in state <strong>{booking.status}</strong> and can no longer be modified or cancelled.
                 </p>
+              )}
+
+              {hasPermission('payment.refund') && booking.payment?.status === 'SUCCESS' && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-2 font-bold text-xs h-10 text-purple-600 border-purple-300 hover:bg-purple-50"
+                  onClick={() => setIsRefundModalOpen(true)}
+                >
+                  <RotateCcwIcon className="w-4 h-4 text-purple-600" />
+                  <span>Admin Manual Refund</span>
+                </Button>
               )}
             </CardContent>
           </Card>
@@ -492,6 +593,128 @@ export default function CustomerBookingDetailPage() {
                   </>
                 ) : (
                   <span>Confirm Reschedule</span>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Online Payment Modal */}
+      <Dialog open={isPayModalOpen} onOpenChange={setIsPayModalOpen}>
+        <DialogContent className="max-w-md p-6 rounded-2xl">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <CreditCardIcon className="w-5 h-5 text-emerald-600" />
+              <span>Mock Payment Gateway</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Simulate an online payment transaction for this appointment booking.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 text-xs">
+            <div className="p-3 bg-secondary/50 rounded-xl border border-border flex justify-between items-center">
+              <span className="font-semibold text-muted-foreground">Total Payable Amount</span>
+              <span className="font-extrabold text-base text-foreground flex items-center">
+                <IndianRupeeIcon className="w-4 h-4 text-primary" />
+                {(booking.priceMinorUnits / 100).toLocaleString('en-IN')}
+              </span>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Simulated Gateway Outcome Token</Label>
+              <select
+                className="w-full h-10 px-3 py-2 text-xs rounded-xl border border-input bg-background font-medium focus:outline-none focus:ring-2 focus:ring-primary"
+                value={paymentToken}
+                onChange={(e: any) => setPaymentToken(e.target.value)}
+              >
+                <option value="tok_success">tok_success (Simulate Payment SUCCESS)</option>
+                <option value="tok_fail">tok_fail (Simulate Payment FAILED & auto-cancel)</option>
+                <option value="tok_delay">tok_delay (Simulate INITIATED pending Webhook)</option>
+              </select>
+              <p className="text-[11px] text-muted-foreground">
+                Select outcome token as specified in Phase 8 testing documentation.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-border">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsPayModalOpen(false)}
+                disabled={isProcessingPayment}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                size="sm"
+                className="gap-1.5 font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={handlePaymentSubmit}
+                disabled={isProcessingPayment}
+              >
+                {isProcessingPayment ? (
+                  <>
+                    <Loader2Icon className="w-3.5 h-3.5 animate-spin" />
+                    <span>Processing Payment...</span>
+                  </>
+                ) : (
+                  <span>Pay Now</span>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Manual Refund Modal */}
+      <Dialog open={isRefundModalOpen} onOpenChange={setIsRefundModalOpen}>
+        <DialogContent className="max-w-md p-6 rounded-2xl">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-xl font-bold text-purple-600 flex items-center gap-2">
+              <RotateCcwIcon className="w-5 h-5" />
+              <span>Admin Manual Refund</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Issue a manual refund for this payment transaction.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 text-xs">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Mandatory Refund Reason</Label>
+              <Input
+                placeholder="e.g. Customer dispute settlement"
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                className="text-xs"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-border">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsRefundModalOpen(false)}
+                disabled={isRefunding}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                size="sm"
+                className="gap-1.5 font-bold bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={handleRefundSubmit}
+                disabled={!refundReason.trim() || isRefunding}
+              >
+                {isRefunding ? (
+                  <>
+                    <Loader2Icon className="w-3.5 h-3.5 animate-spin" />
+                    <span>Refunding...</span>
+                  </>
+                ) : (
+                  <span>Issue Refund</span>
                 )}
               </Button>
             </div>

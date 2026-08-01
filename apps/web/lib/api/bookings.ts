@@ -61,6 +61,7 @@ export interface BookingData {
   paymentMode: PaymentMode;
   cancellationReason?: string | null;
   payment?: PaymentData | null;
+  outstandingBalanceMinorUnits?: number;
   history?: BookingHistoryData[];
   createdAt: string;
   updatedAt: string;

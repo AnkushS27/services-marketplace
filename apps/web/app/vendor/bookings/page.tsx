@@ -11,6 +11,7 @@ import {
   BookingData,
   BookingStatus,
 } from '@/lib/api/bookings';
+import { markCashCollected } from '@/lib/api/payments';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -155,6 +156,32 @@ export default function VendorBookingsPage() {
       toast.add({
         title: 'Error',
         description: err?.message || 'Failed to mark no-show',
+        type: 'error',
+      });
+    }
+  };
+
+  const handleMarkCollected = async (id: string) => {
+    try {
+      const res = await markCashCollected(id);
+      if (res.success) {
+        toast.add({
+          title: 'Cash Payment Recorded!',
+          description: 'Payment status updated to SUCCESS.',
+          type: 'success',
+        });
+        fetchBookings();
+      } else {
+        toast.add({
+          title: 'Action Failed',
+          description: res.error?.message || 'Could not record cash payment.',
+          type: 'error',
+        });
+      }
+    } catch (err: any) {
+      toast.add({
+        title: 'Error',
+        description: err?.message || 'Failed to record cash payment',
         type: 'error',
       });
     }
@@ -422,6 +449,18 @@ export default function VendorBookingsPage() {
                         <span>Cancel Booking</span>
                       </Button>
                     </>
+                  )}
+
+                  {booking.paymentMode === 'PAY_AFTER' && booking.payment?.status !== 'SUCCESS' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 font-bold text-amber-600 border-amber-300 hover:bg-amber-50 text-xs"
+                      onClick={() => handleMarkCollected(booking.id)}
+                    >
+                      <WalletIcon className="w-3.5 h-3.5" />
+                      <span>Mark Cash Collected</span>
+                    </Button>
                   )}
                 </div>
               </Card>
