@@ -44,8 +44,11 @@ import {
   PhoneIcon,
 } from 'lucide-react';
 
+import { getVendorStaff, StaffData } from '@/lib/api/staff';
+
 export default function VendorBookingsPage() {
   const [bookings, setBookings] = useState<BookingData[]>([]);
+  const [staffList, setStaffList] = useState<StaffData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
@@ -55,6 +58,8 @@ export default function VendorBookingsPage() {
     id: string;
     type: 'REJECT' | 'CANCEL';
   } | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<{ id: string } | null>(null);
+  const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [reasonInput, setReasonInput] = useState('');
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
 
@@ -81,17 +86,38 @@ export default function VendorBookingsPage() {
 
   useEffect(() => {
     fetchBookings();
+    async function loadStaff() {
+      try {
+        const res = await getVendorStaff();
+        if (res.success && res.data) {
+          setStaffList(res.data.filter((s) => s.isActive));
+        }
+      } catch {
+        // Staff fetch error ignored if not configured
+      }
+    }
+    loadStaff();
   }, [selectedStatusFilter]);
 
-  const handleConfirm = async (id: string) => {
+  const handleOpenConfirmDialog = (id: string) => {
+    setConfirmTarget({ id });
+    setSelectedStaffId('');
+  };
+
+  const handleConfirmSubmit = async () => {
+    if (!confirmTarget) return;
+
+    setIsSubmittingAction(true);
     try {
-      const res = await confirmBooking(id);
+      const res = await confirmBooking(confirmTarget.id, selectedStaffId || undefined);
       if (res.success && res.data) {
         toast.add({
           title: 'Booking Confirmed!',
-          description: 'Appointment confirmed successfully.',
+          description: selectedStaffId ? 'Appointment confirmed & staff assigned.' : 'Appointment confirmed successfully.',
           type: 'success',
         });
+        setConfirmTarget(null);
+        setSelectedStaffId('');
         fetchBookings();
       } else {
         toast.add({
@@ -106,6 +132,8 @@ export default function VendorBookingsPage() {
         description: err?.message || 'Failed to confirm booking',
         type: 'error',
       });
+    } finally {
+      setIsSubmittingAction(false);
     }
   };
 
@@ -390,6 +418,14 @@ export default function VendorBookingsPage() {
                       {' – '}
                       {slotEndDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                     </p>
+                    {booking.staff && (
+                      <div className="pt-1">
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 font-semibold gap-1 text-[11px]">
+                          <UserIcon className="w-3 h-3" />
+                          Assigned: {booking.staff.name}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -400,7 +436,7 @@ export default function VendorBookingsPage() {
                       <Button
                         size="sm"
                         className="gap-1.5 font-bold bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
-                        onClick={() => handleConfirm(booking.id)}
+                        onClick={() => handleOpenConfirmDialog(booking.id)}
                       >
                         <CheckIcon className="w-3.5 h-3.5" />
                         <span>Confirm Booking</span>
@@ -519,6 +555,75 @@ export default function VendorBookingsPage() {
                   </>
                 ) : (
                   <span>Confirm Action</span>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Booking & Staff Assignment Dialog */}
+      <Dialog open={!!confirmTarget} onOpenChange={() => setConfirmTarget(null)}>
+        <DialogContent className="max-w-md p-6 rounded-2xl">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
+              <CheckCircle2Icon className="w-5 h-5 text-emerald-600" />
+              <span>Confirm Appointment</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Confirm this customer booking and optionally assign an active staff member.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {staffList.length > 0 ? (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Assign Staff Member (Optional)</Label>
+                <select
+                  value={selectedStaffId}
+                  onChange={(e) => setSelectedStaffId(e.target.value)}
+                  className="w-full h-9 px-3 py-1 text-xs rounded-md border border-input bg-background text-foreground shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="">-- No staff assigned --</option>
+                  {staffList.map((staff) => (
+                    <option key={staff.id} value={staff.id}>
+                      {staff.name} (Active)
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Assigning a staff member ensures no double-booking for that specific staff during this slot.
+                </p>
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl bg-secondary/50 border border-border text-xs text-muted-foreground">
+                No active staff members found on your roster. You can confirm the booking now or add staff members under <strong>Staff Roster</strong>.
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmTarget(null)}
+                disabled={isSubmittingAction}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                size="sm"
+                className="gap-1.5 font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={handleConfirmSubmit}
+                disabled={isSubmittingAction}
+              >
+                {isSubmittingAction ? (
+                  <>
+                    <Loader2Icon className="w-3.5 h-3.5 animate-spin" />
+                    <span>Confirming...</span>
+                  </>
+                ) : (
+                  <span>Confirm Booking</span>
                 )}
               </Button>
             </div>

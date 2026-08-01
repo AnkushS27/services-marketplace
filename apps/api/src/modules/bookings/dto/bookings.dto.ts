@@ -71,6 +71,12 @@ export class RejectBookingDto {
   reason?: string;
 }
 
+export class ConfirmBookingDto {
+  @IsOptional()
+  @IsString()
+  staffId?: string;
+}
+
 export class RescheduleBookingDto {
   @IsISO8601()
   newSlotStart: string;

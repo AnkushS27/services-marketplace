@@ -14,6 +14,7 @@ import {
   CancelBookingDto,
   RejectBookingDto,
   RescheduleBookingDto,
+  ConfirmBookingDto,
 } from './dto/bookings.dto';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -70,8 +71,9 @@ export class BookingsController {
   async confirmBooking(
     @Param('id') id: string,
     @CurrentUser() user: CurrentUserPayload,
+    @Body() dto?: ConfirmBookingDto,
   ) {
-    return this.bookingsService.confirmBooking(id, user.userId);
+    return this.bookingsService.confirmBooking(id, user.userId, dto);
   }
 
   @Patch('bookings/:id/reject')

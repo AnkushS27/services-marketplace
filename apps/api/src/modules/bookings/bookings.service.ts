@@ -12,6 +12,7 @@ import {
   CancelBookingDto,
   RejectBookingDto,
   RescheduleBookingDto,
+  ConfirmBookingDto,
 } from './dto/bookings.dto';
 import { CurrentUserPayload } from '../../common/decorators/current-user.decorator';
 import { BookingStatus, PaymentMode, PaymentStatus, PaymentEventType, Prisma } from '@prisma/client';
@@ -288,6 +289,7 @@ export class BookingsService {
         },
         offering: true,
         payment: true,
+        staff: true,
         history: {
           orderBy: { createdAt: 'asc' },
           include: {
@@ -461,6 +463,7 @@ export class BookingsService {
           },
           offering: true,
           payment: true,
+          staff: true,
         },
       }),
     ]);
@@ -544,7 +547,7 @@ export class BookingsService {
   /**
    * Vendor Confirm Booking (PENDING -> CONFIRMED)
    */
-  async confirmBooking(id: string, userId: string) {
+  async confirmBooking(id: string, userId: string, dto?: ConfirmBookingDto) {
     const booking = await this.prisma.booking.findUnique({
       where: { id },
       include: {
@@ -571,14 +574,85 @@ export class BookingsService {
       }
     }
 
+    // Phase 12: Validate staff member if staffId is provided
+    if (dto?.staffId) {
+      const staffMember = await this.prisma.staff.findFirst({
+        where: {
+          id: dto.staffId,
+          vendorProfileId: booking.service.vendorProfile.id,
+        },
+      });
+
+      if (!staffMember) {
+        throw new NotFoundException(`Staff member with ID '${dto.staffId}' not found for this vendor`);
+      }
+
+      if (!staffMember.isActive) {
+        throw new UnprocessableEntityException(`Staff member '${staffMember.name}' is currently inactive`);
+      }
+
+      // Check for overlapping bookings assigned to this staff member
+      const overlappingBooking = await this.prisma.booking.findFirst({
+        where: {
+          id: { not: booking.id },
+          staffId: dto.staffId,
+          status: {
+            in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.COMPLETED],
+          },
+          slotStart: { lt: booking.slotEnd },
+          slotEnd: { gt: booking.slotStart },
+        },
+      });
+
+      if (overlappingBooking) {
+        throw new ConflictException(
+          `Staff member '${staffMember.name}' already has an assigned overlapping booking during this time slot`,
+        );
+      }
+    }
+
+    // Check total vendor active staff capacity across ALL services/offerings for overlapping times
+    const activeStaffCount = await this.prisma.staff.count({
+      where: {
+        vendorProfileId: booking.service.vendorProfile.id,
+        isActive: true,
+      },
+    });
+
+    if (activeStaffCount > 0) {
+      const totalVendorOverlappingBookings = await this.prisma.booking.count({
+        where: {
+          id: { not: booking.id },
+          service: {
+            vendorProfileId: booking.service.vendorProfile.id,
+          },
+          status: {
+            in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.COMPLETED],
+          },
+          slotStart: { lt: booking.slotEnd },
+          slotEnd: { gt: booking.slotStart },
+        },
+      });
+
+      if (totalVendorOverlappingBookings >= activeStaffCount) {
+        throw new ConflictException(
+          `Vendor has reached maximum concurrent staff capacity (${activeStaffCount} active staff) for this time window`,
+        );
+      }
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.booking.update({
         where: { id },
-        data: { status: BookingStatus.CONFIRMED },
+        data: {
+          status: BookingStatus.CONFIRMED,
+          ...(dto?.staffId ? { staffId: dto.staffId } : {}),
+        },
         include: {
           service: true,
           offering: true,
           payment: true,
+          staff: true,
         },
       });
 
@@ -588,7 +662,8 @@ export class BookingsService {
           fromStatus: BookingStatus.PENDING,
           toStatus: BookingStatus.CONFIRMED,
           actorUserId: userId,
-          reason: 'Vendor confirmed booking',
+          reason: dto?.staffId ? `Vendor confirmed booking and assigned staff` : 'Vendor confirmed booking',
+          metadata: dto?.staffId ? { staffId: dto.staffId } : undefined,
         },
       });
 

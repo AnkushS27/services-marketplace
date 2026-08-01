@@ -208,4 +208,99 @@ export class VendorsService {
 
     return profile;
   }
+
+  // --- Staff Management (Phase 12) ---
+
+  async getStaffList(userId: string) {
+    const profile = await this.prisma.vendorProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Vendor profile not found');
+    }
+
+    return this.prisma.staff.findMany({
+      where: { vendorProfileId: profile.id },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createStaff(userId: string, dto: { name: string; isActive?: boolean }) {
+    const profile = await this.prisma.vendorProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Vendor profile not found');
+    }
+
+    return this.prisma.staff.create({
+      data: {
+        vendorProfileId: profile.id,
+        name: dto.name,
+        isActive: dto.isActive !== undefined ? dto.isActive : true,
+      },
+    });
+  }
+
+  async updateStaff(
+    userId: string,
+    staffId: string,
+    dto: { name?: string; isActive?: boolean },
+  ) {
+    const profile = await this.prisma.vendorProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Vendor profile not found');
+    }
+
+    const staff = await this.prisma.staff.findFirst({
+      where: {
+        id: staffId,
+        vendorProfileId: profile.id,
+      },
+    });
+
+    if (!staff) {
+      throw new NotFoundException(`Staff member with ID '${staffId}' not found`);
+    }
+
+    return this.prisma.staff.update({
+      where: { id: staffId },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+      },
+    });
+  }
+
+  async deleteStaff(userId: string, staffId: string) {
+    const profile = await this.prisma.vendorProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Vendor profile not found');
+    }
+
+    const staff = await this.prisma.staff.findFirst({
+      where: {
+        id: staffId,
+        vendorProfileId: profile.id,
+      },
+    });
+
+    if (!staff) {
+      throw new NotFoundException(`Staff member with ID '${staffId}' not found`);
+    }
+
+    await this.prisma.staff.delete({
+      where: { id: staffId },
+    });
+
+    return { success: true };
+  }
 }

@@ -14,6 +14,7 @@ import {
   UserIcon,
   BriefcaseIcon,
   BuildingIcon,
+  UsersIcon,
 } from 'lucide-react';
 
 interface VendorProfileData {
@@ -109,7 +110,29 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
                   }`}
                 >
                   <BriefcaseIcon className="w-3.5 h-3.5" />
-                  <span>Services Catalogue</span>
+                  <span>Services</span>
+                </Link>
+                <Link
+                  href="/vendor/staff"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    pathname === '/vendor/staff'
+                      ? 'bg-card text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <UsersIcon className="w-3.5 h-3.5 text-primary" />
+                  <span>Staff Roster</span>
+                </Link>
+                <Link
+                  href="/vendor/bookings"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    pathname === '/vendor/bookings'
+                      ? 'bg-card text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <ClockIcon className="w-3.5 h-3.5 text-primary" />
+                  <span>Bookings</span>
                 </Link>
               </nav>
 

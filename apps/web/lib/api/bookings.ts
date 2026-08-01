@@ -60,6 +60,12 @@ export interface BookingData {
   currency: string;
   paymentMode: PaymentMode;
   cancellationReason?: string | null;
+  staffId?: string | null;
+  staff?: {
+    id: string;
+    name: string;
+    isActive: boolean;
+  } | null;
   payment?: PaymentData | null;
   outstandingBalanceMinorUnits?: number;
   history?: BookingHistoryData[];
@@ -142,9 +148,10 @@ export async function getAdminBookings(params?: QueryBookingsParams) {
   return apiFetch<BookingData[]>(`/admin/bookings${queryString}`);
 }
 
-export async function confirmBooking(id: string) {
+export async function confirmBooking(id: string, staffId?: string) {
   return apiFetch<BookingData>(`/bookings/${id}/confirm`, {
     method: 'PATCH',
+    body: staffId ? JSON.stringify({ staffId }) : undefined,
   });
 }
 

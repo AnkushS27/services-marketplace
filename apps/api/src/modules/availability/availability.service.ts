@@ -314,6 +314,14 @@ export class AvailabilityService {
     // Query active bookings for capacity math
     const slotStartTimes = potentialSlots.map((s) => s.slotStart);
 
+    // Fetch active staff count for vendor
+    const activeStaffCount = await this.prisma.staff.count({
+      where: {
+        vendorProfileId: service.vendorProfileId,
+        isActive: true,
+      },
+    });
+
     const activeBookings = await this.prisma.booking.findMany({
       where: {
         serviceId,
@@ -338,19 +346,52 @@ export class AvailabilityService {
       bookingCountsMap.set(key, (bookingCountsMap.get(key) || 0) + 1);
     }
 
+    // Fetch all active vendor bookings across all services for overlap calculation if staff restriction applies
+    const allVendorBookings = activeStaffCount > 0
+      ? await this.prisma.booking.findMany({
+          where: {
+            service: { vendorProfileId: service.vendorProfileId },
+            status: {
+              in: [
+                BookingStatus.PENDING,
+                BookingStatus.CONFIRMED,
+                BookingStatus.COMPLETED,
+              ],
+            },
+          },
+          select: {
+            slotStart: true,
+            slotEnd: true,
+          },
+        })
+      : [];
+
     const availableSlots: DerivedSlot[] = [];
 
     for (const slot of potentialSlots) {
       const key = slot.slotStart.toISOString();
       const bookedCount = bookingCountsMap.get(key) || 0;
-      const remaining = slot.capacity - bookedCount;
+      
+      let effectiveCapacity = slot.capacity;
+
+      if (activeStaffCount > 0) {
+        // Count overlapping bookings across all vendor offerings
+        const concurrentVendorCount = allVendorBookings.filter(
+          (b) => b.slotStart < slot.slotEnd && b.slotEnd > slot.slotStart,
+        ).length;
+
+        const staffRemaining = activeStaffCount - concurrentVendorCount;
+        effectiveCapacity = Math.min(slot.capacity, Math.max(0, staffRemaining + bookedCount));
+      }
+
+      const remaining = effectiveCapacity - bookedCount;
 
       if (remaining > 0) {
         availableSlots.push({
           slotStart: slot.slotStart,
           slotEnd: slot.slotEnd,
           remaining,
-          capacity: slot.capacity,
+          capacity: effectiveCapacity,
         });
       }
     }
