@@ -1,0 +1,293 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum RoleType {
+  CUSTOMER
+  VENDOR
+  ADMIN
+}
+
+enum VendorStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ServiceStatus {
+  DRAFT
+  PUBLISHED
+  SUSPENDED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  REJECTED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentMode {
+  PAY_NOW
+  PAY_AFTER
+}
+
+enum PaymentStatus {
+  INITIATED
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PaymentEventType {
+  INITIATED
+  SUCCESS
+  FAILED
+  REFUNDED
+  WEBHOOK_RECEIVED
+}
+
+model Permission {
+  id              String            @id @default(uuid())
+  slug            String            @unique
+  description     String
+  rolePermissions RolePermission[]
+  createdAt       DateTime          @default(now())
+}
+
+model Role {
+  id           String           @id @default(uuid())
+  name         String           @unique
+  type         RoleType
+  bypassChecks Boolean          @default(false)
+  isSystem     Boolean          @default(false)
+  permissions  RolePermission[]
+  users        User[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model User {
+  id                    String           @id @default(uuid())
+  email                 String           @unique
+  passwordHash          String
+  name                  String
+  phone                 String?
+  roleId                String
+  role                  Role             @relation(fields: [roleId], references: [id])
+  isActive              Boolean          @default(true)
+  vendorProfile         VendorProfile?
+  refreshTokens         RefreshToken[]
+  bookings              Booking[]        @relation("CustomerBookings")
+  bookingHistoryActions BookingHistory[] @relation("HistoryActor")
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model VendorProfile {
+  id              String           @id @default(uuid())
+  userId          String           @unique
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName    String
+  contactName     String
+  contactPhone    String
+  address         String
+  timezone        String           @default("Asia/Kolkata")
+  status          VendorStatus     @default(PENDING)
+  rejectionReason String?
+  approvedAt      DateTime?
+  documents       VendorDocument[]
+  services        Service[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model VendorDocument {
+  id              String        @id @default(uuid())
+  vendorProfileId String
+  vendorProfile   VendorProfile @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
+  filename        String
+  originalName    String
+  createdAt       DateTime      @default(now())
+}
+
+model Category {
+  id        String     @id @default(uuid())
+  name      String
+  slug      String     @unique
+  parentId  String?
+  parent    Category?  @relation("CategoryToSub", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryToSub")
+  isActive  Boolean    @default(true)
+  services  Service[]
+  createdAt DateTime   @default(now())
+}
+
+model Service {
+  id                     String                   @id @default(uuid())
+  vendorProfileId        String
+  vendorProfile          VendorProfile            @relation(fields: [vendorProfileId], references: [id])
+  categoryId             String
+  category               Category                 @relation(fields: [categoryId], references: [id])
+  title                  String
+  description            String
+  images                 String[]
+  status                 ServiceStatus            @default(DRAFT)
+  suspendedReason        String?
+  freeCancellationHours  Int                      @default(24)
+  offerings              Offering[]
+  availabilityRules      AvailabilityRule[]
+  availabilityExceptions AvailabilityException[]
+  bookings               Booking[]
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+
+  @@index([vendorProfileId])
+  @@index([categoryId])
+  @@index([status])
+}
+
+model Offering {
+  id              String    @id @default(uuid())
+  serviceId       String
+  service         Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  name            String
+  durationMinutes Int
+  priceMinorUnits Int
+  isActive        Boolean   @default(true)
+  bookings        Booking[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model AvailabilityRule {
+  id          String   @id @default(uuid())
+  serviceId   String
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  weekday     Int
+  startMinute Int
+  endMinute   Int
+  capacity    Int
+  createdAt   DateTime @default(now())
+
+  @@index([serviceId, weekday])
+}
+
+model AvailabilityException {
+  id          String   @id @default(uuid())
+  serviceId   String
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  date        DateTime
+  isClosed    Boolean  @default(true)
+  startMinute Int?
+  endMinute   Int?
+  capacity    Int?
+  createdAt   DateTime @default(now())
+
+  @@index([serviceId, date])
+}
+
+model Booking {
+  id                 String           @id @default(uuid())
+  customerId         String
+  customer           User             @relation("CustomerBookings", fields: [customerId], references: [id])
+  serviceId          String
+  service            Service          @relation(fields: [serviceId], references: [id])
+  offeringId         String
+  offering           Offering         @relation(fields: [offeringId], references: [id])
+  slotStart          DateTime
+  slotEnd            DateTime
+  status             BookingStatus    @default(PENDING)
+  priceMinorUnits    Int
+  currency           String           @default("INR")
+  paymentMode        PaymentMode
+  cancellationReason String?
+  history            BookingHistory[]
+  payment            Payment?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([serviceId, offeringId, slotStart])
+  @@index([customerId])
+  @@index([status])
+}
+
+model BookingHistory {
+  id          String         @id @default(uuid())
+  bookingId   String
+  booking     Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  fromStatus  BookingStatus?
+  toStatus    BookingStatus
+  actorUserId String?
+  actor       User?          @relation("HistoryActor", fields: [actorUserId], references: [id])
+  reason      String?
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+}
+
+model Payment {
+  id               String         @id @default(uuid())
+  bookingId        String         @unique
+  booking          Booking        @relation(fields: [bookingId], references: [id])
+  amountMinorUnits Int
+  currency         String         @default("INR")
+  providerRef      String         @unique
+  status           PaymentStatus  @default(INITIATED)
+  events           PaymentEvent[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model PaymentEvent {
+  id        String           @id @default(uuid())
+  paymentId String
+  payment   Payment          @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  type      PaymentEventType
+  metadata  Json?
+  createdAt DateTime         @default(now())
+}
+
+model IdempotencyKey {
+  key            String   @id
+  endpoint       String
+  responseStatus Int
+  responseBody   Json
+  createdAt      DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String?
+  action      String
+  targetType  String?
+  targetId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+}
