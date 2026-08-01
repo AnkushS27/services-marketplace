@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import {
   getVendorServices,
@@ -44,6 +45,7 @@ import {
   SparklesIcon,
   TagIcon,
   FileTextIcon,
+  CalendarIcon,
 } from 'lucide-react';
 
 export default function VendorServicesPage() {
@@ -530,6 +532,16 @@ export default function VendorServicesPage() {
                           <span>Publish Service</span>
                         </Button>
                       )}
+                      <Link href={`/vendor/services/${srv.id}/availability`}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                        >
+                          <CalendarIcon className="w-3.5 h-3.5 text-primary" />
+                          <span>Availability</span>
+                        </Button>
+                      </Link>
                       <Button
                         size="sm"
                         variant="outline"

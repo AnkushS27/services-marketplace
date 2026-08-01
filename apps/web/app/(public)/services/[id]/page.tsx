@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getPublicServiceDetail, ServiceData } from '@/lib/api/services';
+import { SlotPicker } from '@/components/shared/slot-picker';
+import { DerivedSlotData } from '@/lib/api/availability';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -31,6 +33,7 @@ export default function PublicServiceDetailPage() {
   const [service, setService] = useState<ServiceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOfferingId, setSelectedOfferingId] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<DerivedSlotData | null>(null);
 
   useEffect(() => {
     async function loadServiceDetail() {
@@ -216,6 +219,31 @@ export default function PublicServiceDetailPage() {
                 No active offerings listed for this service currently.
               </p>
             )}
+
+            {/* Interactive Slot Picker */}
+            {selectedOfferingId && (
+              <Card className="p-6 border-2 border-primary/30 bg-card shadow-xs rounded-2xl space-y-4 mt-6">
+                <div className="flex items-center gap-2 border-b border-border pb-3">
+                  <CalendarIcon className="w-5 h-5 text-primary" />
+                  <h3 className="text-lg font-bold text-foreground">
+                    Available Appointment Slots
+                  </h3>
+                </div>
+                <SlotPicker
+                  serviceId={serviceId}
+                  offeringId={selectedOfferingId}
+                  selectedSlot={selectedSlot}
+                  onSelectSlot={(slot) => {
+                    setSelectedSlot(slot);
+                    toast.add({
+                      title: 'Slot Selected!',
+                      description: `Appointment selected for ${new Date(slot.slotStart).toLocaleDateString()} at ${new Date(slot.slotStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+                      type: 'success',
+                    });
+                  }}
+                />
+              </Card>
+            )}
           </div>
         </div>
 
@@ -274,20 +302,38 @@ export default function PublicServiceDetailPage() {
               </CardDescription>
             </div>
 
+            {selectedSlot && (
+              <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs space-y-1">
+                <span className="font-bold text-foreground block">Selected Slot:</span>
+                <p className="text-muted-foreground">
+                  {new Date(selectedSlot.slotStart).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                  })}{' '}
+                  at{' '}
+                  {new Date(selectedSlot.slotStart).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+              </div>
+            )}
+
             <Button
               className="w-full font-bold gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-11"
               size="lg"
-              disabled={!selectedOfferingId}
+              disabled={!selectedOfferingId || !selectedSlot}
               onClick={() => {
                 toast.add({
-                  title: 'Offering Selected',
-                  description: 'Slot picker & booking creation engine will land in Phase 6 & Phase 7!',
+                  title: 'Slot Reserved!',
+                  description: 'Booking creation & payment state machine will land in Phase 7!',
                   type: 'info',
                 });
               }}
             >
               <CalendarIcon className="w-4 h-4" />
-              <span>Select Slot & Book</span>
+              <span>{selectedSlot ? 'Proceed to Book' : 'Select a Slot Above'}</span>
             </Button>
           </Card>
         </div>
