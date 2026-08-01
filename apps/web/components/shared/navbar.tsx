@@ -33,6 +33,14 @@ export function Navbar() {
             >
               Browse Services
             </Link>
+            {user?.role.type === 'ADMIN' && (
+              <Link
+                href="/admin/roles"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Roles & Permissions
+              </Link>
+            )}
           </nav>
         </div>
 
