@@ -34,11 +34,27 @@ export function Navbar() {
               Browse Services
             </Link>
             {user?.role.type === 'ADMIN' && (
+              <>
+                <Link
+                  href="/admin/roles"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Roles & Permissions
+                </Link>
+                <Link
+                  href="/admin/vendors"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Vendor Approvals
+                </Link>
+              </>
+            )}
+            {user?.role.type === 'VENDOR' && (
               <Link
-                href="/admin/roles"
+                href="/vendor/onboarding"
                 className="text-muted-foreground transition-colors hover:text-foreground"
               >
-                Roles & Permissions
+                Vendor Profile
               </Link>
             )}
           </nav>

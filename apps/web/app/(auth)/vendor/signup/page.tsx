@@ -17,7 +17,7 @@ const vendorSignupSchema = z.object({
   contactName: z.string().min(2, 'Contact name must be at least 2 characters'),
   contactPhone: z.string().min(5, 'Contact phone is required'),
   address: z.string().min(5, 'Business address is required'),
-  timezone: z.string().default('Asia/Kolkata'),
+  timezone: z.string().optional(),
 });
 
 type VendorSignupFormValues = z.infer<typeof vendorSignupSchema>;
