@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   description: "Book professional services on demand",
 };
 
+import { Toaster } from "@/components/ui/toast";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -33,6 +35,7 @@ export default function RootLayout({
         <AuthProvider>
           <Navbar />
           <main className="flex-1">{children}</main>
+          <Toaster />
         </AuthProvider>
       </body>
     </html>

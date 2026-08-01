@@ -2,6 +2,17 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
+import { Button } from '@/components/ui/button';
+import {
+  SparklesIcon,
+  StoreIcon,
+  ShieldCheckIcon,
+  UserIcon,
+  LogOutIcon,
+  SearchIcon,
+  LogInIcon,
+  UserPlusIcon,
+} from 'lucide-react';
 
 export function Navbar() {
   const { user, isLoading, logout } = useAuth();
@@ -10,9 +21,9 @@ export function Navbar() {
     if (!user) return '/';
     switch (user.role.type) {
       case 'ADMIN':
-        return '/admin/dashboard';
+        return '/admin/vendors';
       case 'VENDOR':
-        return '/vendor/dashboard';
+        return '/vendor/services';
       case 'CUSTOMER':
       default:
         return '/account/bookings';
@@ -20,86 +31,119 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center space-x-2 font-bold text-xl tracking-tight text-primary">
-            <span>Marketplace</span>
+    <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-card/90 backdrop-blur-md shadow-xs">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4 max-w-7xl">
+        <div className="flex items-center gap-8">
+          <Link href="/" className="flex items-center space-x-2.5 font-extrabold text-xl tracking-tight text-primary hover:opacity-90 transition-opacity">
+            <div className="p-2 rounded-xl bg-primary text-primary-foreground shadow-xs">
+              <SparklesIcon className="w-5 h-5" />
+            </div>
+            <span className="font-bold text-foreground">Services<span className="text-primary">Hub</span></span>
           </Link>
-          <nav className="hidden md:flex items-center space-x-4 text-sm font-medium">
+
+          <nav className="hidden md:flex items-center space-x-2 text-sm font-medium">
             <Link
               href="/services"
-              className="text-muted-foreground transition-colors hover:text-foreground"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
             >
-              Browse Services
+              <SearchIcon className="w-4 h-4" />
+              <span>Browse Services</span>
             </Link>
+
             {user?.role.type === 'ADMIN' && (
               <>
                 <Link
-                  href="/admin/roles"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
+                  href="/admin/categories"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
                 >
-                  Roles & Permissions
+                  <ShieldCheckIcon className="w-4 h-4" />
+                  <span>Categories</span>
+                </Link>
+                <Link
+                  href="/admin/roles"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
+                >
+                  <ShieldCheckIcon className="w-4 h-4" />
+                  <span>Roles & Permissions</span>
                 </Link>
                 <Link
                   href="/admin/vendors"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
                 >
-                  Vendor Approvals
+                  <StoreIcon className="w-4 h-4" />
+                  <span>Vendor Approvals</span>
                 </Link>
               </>
             )}
+
             {user?.role.type === 'VENDOR' && (
-              <Link
-                href="/vendor/onboarding"
-                className="text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Vendor Profile
-              </Link>
+              <>
+                <Link
+                  href="/vendor/services"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
+                >
+                  <StoreIcon className="w-4 h-4" />
+                  <span>Service Catalogue</span>
+                </Link>
+                <Link
+                  href="/vendor/onboarding"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
+                >
+                  <UserIcon className="w-4 h-4" />
+                  <span>Vendor Profile</span>
+                </Link>
+              </>
             )}
           </nav>
         </div>
 
         <div className="flex items-center gap-4">
           {isLoading ? (
-            <div className="h-8 w-20 animate-pulse rounded bg-muted" />
+            <div className="h-9 w-24 animate-pulse rounded-lg bg-muted" />
           ) : user ? (
-            <div className="flex items-center gap-4">
-              <Link
-                href={getDashboardLink()}
-                className="text-sm font-medium hover:underline flex items-center gap-2"
-              >
-                <span>{user.name}</span>
-                <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary border border-primary/20">
-                  {user.role.name}
-                </span>
-              </Link>
-              <button
-                onClick={() => logout()}
-                className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                Log out
-              </button>
-            </div>
-          ) : (
             <div className="flex items-center gap-3">
               <Link
-                href="/login"
-                className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                href={getDashboardLink()}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-secondary/50 hover:bg-secondary transition-colors"
               >
-                Log in
+                <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="text-left hidden sm:block">
+                  <p className="text-xs font-bold leading-none text-foreground">{user.name}</p>
+                  <p className="text-[10px] font-semibold text-primary capitalize leading-tight">{user.role.name}</p>
+                </div>
               </Link>
-              <Link
-                href="/signup"
-                className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => logout()}
+                className="gap-1.5 border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
               >
-                Sign up
+                <LogOutIcon className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Log out</span>
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link href="/login">
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <LogInIcon className="w-3.5 h-3.5" />
+                  <span>Log in</span>
+                </Button>
               </Link>
-              <Link
-                href="/vendor/signup"
-                className="hidden sm:inline-flex items-center justify-center rounded-md border border-primary/30 bg-primary/5 px-3 py-1.5 text-sm font-medium text-primary shadow-sm transition-colors hover:bg-primary/10"
-              >
-                Vendor Signup
+              <Link href="/signup">
+                <Button size="sm" className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90">
+                  <UserPlusIcon className="w-3.5 h-3.5" />
+                  <span>Sign up</span>
+                </Button>
+              </Link>
+              <Link href="/vendor/signup" className="hidden sm:inline-block">
+                <Button variant="secondary" size="sm" className="gap-1.5 border border-primary/20 text-primary">
+                  <StoreIcon className="w-3.5 h-3.5" />
+                  <span>Become a Vendor</span>
+                </Button>
               </Link>
             </div>
           )}
