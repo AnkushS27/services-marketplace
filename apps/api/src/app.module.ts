@@ -15,6 +15,7 @@ import { BookingsModule } from './modules/bookings/bookings.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
     AvailabilityModule,
     BookingsModule,
     PaymentsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

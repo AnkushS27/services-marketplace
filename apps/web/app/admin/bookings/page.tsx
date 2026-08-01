@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   getAdminBookings,
-  cancelBooking,
   BookingData,
   BookingStatus,
 } from '@/lib/api/bookings';
+import { forceCancelBooking } from '@/lib/api/admin';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -87,7 +87,7 @@ export default function AdminBookingsPage() {
 
     setIsSubmitting(true);
     try {
-      const res = await cancelBooking(cancelBookingId, forceCancelReason);
+      const res = await forceCancelBooking(cancelBookingId, forceCancelReason);
       if (res.success) {
         toast.add({
           title: 'Booking Force-Cancelled',

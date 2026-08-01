@@ -22,7 +22,7 @@ export function Navbar() {
     if (!user) return '/';
     switch (user.role.type) {
       case 'ADMIN':
-        return '/admin/vendors';
+        return '/admin/dashboard';
       case 'VENDOR':
         return '/vendor/services';
       case 'CUSTOMER':
@@ -64,11 +64,25 @@ export function Navbar() {
             {user?.role.type === 'ADMIN' && (
               <>
                 <Link
+                  href="/admin/dashboard"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
+                >
+                  <SparklesIcon className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </Link>
+                <Link
                   href="/admin/bookings"
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
                 >
                   <CalendarIcon className="w-4 h-4" />
                   <span>Bookings</span>
+                </Link>
+                <Link
+                  href="/admin/vendors"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
+                >
+                  <StoreIcon className="w-4 h-4" />
+                  <span>Vendors</span>
                 </Link>
                 <Link
                   href="/admin/categories"
@@ -82,14 +96,7 @@ export function Navbar() {
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
                 >
                   <ShieldCheckIcon className="w-4 h-4" />
-                  <span>Roles & Permissions</span>
-                </Link>
-                <Link
-                  href="/admin/vendors"
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-colors"
-                >
-                  <StoreIcon className="w-4 h-4" />
-                  <span>Vendor Approvals</span>
+                  <span>Roles & RBAC</span>
                 </Link>
               </>
             )}
