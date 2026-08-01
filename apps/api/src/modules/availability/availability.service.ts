@@ -315,12 +315,14 @@ export class AvailabilityService {
     const slotStartTimes = potentialSlots.map((s) => s.slotStart);
 
     // Fetch active staff count for vendor
-    const activeStaffCount = await this.prisma.staff.count({
-      where: {
-        vendorProfileId: service.vendorProfileId,
-        isActive: true,
-      },
-    });
+    const activeStaffCount = this.prisma.staff
+      ? await this.prisma.staff.count({
+          where: {
+            vendorProfileId: service.vendorProfileId,
+            isActive: true,
+          },
+        })
+      : 0;
 
     const activeBookings = await this.prisma.booking.findMany({
       where: {

@@ -40,6 +40,14 @@ describe('BookingsService', () => {
     vendorProfile: {
       findUnique: jest.fn(),
     },
+    staff: {
+      count: jest.fn().mockResolvedValue(0),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
     $transaction: jest.fn((cb) => cb(mockPrismaService)),
     $executeRaw: jest.fn().mockResolvedValue(1),
   };

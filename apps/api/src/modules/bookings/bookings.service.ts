@@ -612,12 +612,14 @@ export class BookingsService {
     }
 
     // Check total vendor active staff capacity across ALL services/offerings for overlapping times
-    const activeStaffCount = await this.prisma.staff.count({
-      where: {
-        vendorProfileId: booking.service.vendorProfile.id,
-        isActive: true,
-      },
-    });
+    const activeStaffCount = this.prisma.staff
+      ? await this.prisma.staff.count({
+          where: {
+            vendorProfileId: booking.service.vendorProfile.id,
+            isActive: true,
+          },
+        })
+      : 0;
 
     if (activeStaffCount > 0) {
       const totalVendorOverlappingBookings = await this.prisma.booking.count({

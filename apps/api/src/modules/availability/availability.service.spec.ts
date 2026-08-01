@@ -79,6 +79,9 @@ describe('AvailabilityService', () => {
       booking: {
         findMany: jest.fn(),
       },
+      staff: {
+        count: jest.fn().mockResolvedValue(0),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({

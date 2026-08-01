@@ -1,0 +1,337 @@
+openapi: 3.0.3
+info:
+  title: Services Marketplace API
+  description: Single source of truth API documentation for Services Marketplace backend.
+  version: 1.0.0
+servers:
+  - url: https://services-marketplace-api.onrender.com
+    description: Production Server (Render)
+  - url: http://localhost:4000
+    description: Local Development Server
+
+paths:
+  /health:
+    get:
+      summary: System health check
+      responses:
+        '200':
+          description: System is healthy and database is connected
+
+  /auth/signup/customer:
+    post:
+      summary: Register a new customer account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                name: { type: string }
+                phone: { type: string }
+      responses:
+        '201': { description: Customer account created successfully }
+        '409': { description: Email already exists }
+
+  /auth/signup/vendor:
+    post:
+      summary: Register a new vendor account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name, businessName, contactName, contactPhone, address]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                name: { type: string }
+                businessName: { type: string }
+                contactName: { type: string }
+                contactPhone: { type: string }
+                address: { type: string }
+                timezone: { type: string, default: 'Asia/Kolkata' }
+      responses:
+        '201': { description: Vendor account and profile created }
+        '409': { description: Email already exists }
+
+  /auth/login:
+    post:
+      summary: Log in to user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200': { description: Login successful, returns JWT token and sets refresh cookie }
+        '401': { description: Invalid credentials }
+
+  /auth/refresh:
+    post:
+      summary: Refresh JWT access token using httpOnly refresh cookie
+      responses:
+        '200': { description: Token refreshed }
+        '401': { description: Invalid or expired refresh token }
+
+  /auth/logout:
+    post:
+      summary: Log out user and revoke refresh token
+      responses:
+        '200': { description: Logged out }
+
+  /me:
+    get:
+      summary: Get current authenticated user details and active permissions
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: User details returned }
+        '401': { description: Unauthorized }
+
+  /permissions:
+    get:
+      summary: List all permission slugs (Admin)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: List of permissions }
+
+  /roles:
+    get:
+      summary: List all roles
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Roles list }
+    post:
+      summary: Create custom role
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Role created }
+
+  /roles/{id}:
+    patch:
+      summary: Update role permissions
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Role updated }
+    delete:
+      summary: Delete custom role
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Role deleted }
+
+  /vendors/me:
+    get:
+      summary: Get authenticated vendor profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Profile returned }
+
+  /vendors/me/profile:
+    patch:
+      summary: Update authenticated vendor profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Profile updated }
+
+  /admin/vendors:
+    get:
+      summary: List vendors for admin review
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [PENDING, APPROVED, REJECTED] }
+      responses:
+        '200': { description: Vendors list }
+
+  /admin/vendors/{id}/approve:
+    patch:
+      summary: Approve vendor application
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Vendor approved }
+
+  /admin/vendors/{id}/reject:
+    patch:
+      summary: Reject vendor application with reason
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Vendor rejected }
+
+  /categories:
+    get:
+      summary: Get public category tree
+      responses:
+        '200': { description: Categories tree }
+    post:
+      summary: Create category (Admin)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Category created }
+
+  /services:
+    get:
+      summary: Public service catalogue browse
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 20 }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: categoryId
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: Paginated published services }
+
+  /services/{id}:
+    get:
+      summary: Get service details and offerings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Service details }
+
+  /services/{id}/publish:
+    patch:
+      summary: Publish vendor service
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Service published }
+
+  /services/{id}/slots:
+    get:
+      summary: Get bookable slots for service offering
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: offeringId
+          in: query
+          required: true
+          schema: { type: string }
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200': { description: Available derived slots }
+
+  /bookings:
+    get:
+      summary: Get customer bookings
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Bookings list }
+    post:
+      summary: Create new booking
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Booking created }
+
+  /bookings/{id}:
+    get:
+      summary: Get booking details and history timeline
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Booking details }
+
+  /bookings/{id}/confirm:
+    patch:
+      summary: Confirm booking (Vendor)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Booking confirmed }
+
+  /payments/{id}/confirm:
+    post:
+      summary: Confirm payment for PAY_NOW booking
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Payment processed }
+
+  /payments/webhook:
+    post:
+      summary: Payment provider webhook endpoint
+      parameters:
+        - name: X-Webhook-Secret
+          in: header
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Webhook processed }
+
+  /admin/dashboard/summary:
+    get:
+      summary: Admin dashboard aggregate metrics
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Metrics summary }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

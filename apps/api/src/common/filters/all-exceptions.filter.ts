@@ -68,6 +68,26 @@ export class AllExceptionsFilter implements ExceptionFilter {
           code = resObj.code;
         }
       }
+    } else if (exception && typeof exception === 'object' && 'code' in exception && typeof (exception as any).code === 'string' && (exception as any).code.startsWith('P')) {
+      // Handle Prisma Client Known Request Errors
+      const prismaCode = (exception as any).code;
+      if (prismaCode === 'P2002') {
+        status = HttpStatus.CONFLICT;
+        code = 'CONFLICT';
+        message = 'A resource with this unique constraint already exists.';
+      } else if (prismaCode === 'P2025') {
+        status = HttpStatus.NOT_FOUND;
+        code = 'NOT_FOUND';
+        message = 'Requested record not found.';
+      } else if (prismaCode === 'P2003') {
+        status = HttpStatus.BAD_REQUEST;
+        code = 'FOREIGN_KEY_VIOLATION';
+        message = 'Invalid referenced entity ID.';
+      } else {
+        status = HttpStatus.BAD_REQUEST;
+        code = 'DATABASE_ERROR';
+        message = 'Database operation failed validation.';
+      }
     } else if (exception instanceof Error) {
       this.logger.error(`Unhandled Exception: ${exception.message}`, exception.stack);
       message = exception.message;
