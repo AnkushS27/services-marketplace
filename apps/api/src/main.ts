@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -10,6 +11,7 @@ async function bootstrap() {
 
   // Helmet baseline security headers
   app.use(helmet());
+  app.use(cookieParser());
 
   // CORS configuration
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
