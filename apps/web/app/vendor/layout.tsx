@@ -69,7 +69,19 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
                 Manage your profile, services, availability, and bookings.
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
+              <Link
+                href="/vendor/onboarding"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Profile & Documents
+              </Link>
+              <Link
+                href="/vendor/services"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Services & Catalogue
+              </Link>
               <Badge
                 variant={
                   profile.status === 'APPROVED'
@@ -82,12 +94,6 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
               >
                 Status: {profile.status}
               </Badge>
-              <Link
-                href="/vendor/onboarding"
-                className="text-xs font-medium text-primary hover:underline"
-              >
-                Edit Profile
-              </Link>
             </div>
           </div>
 
