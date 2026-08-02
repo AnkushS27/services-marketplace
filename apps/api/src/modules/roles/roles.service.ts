@@ -279,4 +279,28 @@ export class RolesService {
       },
     };
   }
+
+  async getAllUsers() {
+    const users = await this.prisma.user.findMany({
+      include: {
+        role: true,
+      },
+      orderBy: [
+        { role: { name: 'asc' } },
+        { name: 'asc' },
+      ],
+    });
+
+    return users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: {
+        id: u.role.id,
+        name: u.role.name,
+        type: u.role.type,
+      },
+    }));
+  }
 }
+

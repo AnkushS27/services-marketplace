@@ -6,7 +6,7 @@ This document records the core design decisions, data model, concurrency strateg
 
 ## 1. System Architecture & Domain Model
 
-The application uses a 3-tier decoupled monorepo layout consisting of NestJS (`apps/api`) and Next.js 14 App Router (`apps/web`), backed by PostgreSQL via Prisma ORM.
+The application uses a 3-tier decoupled monorepo layout consisting of NestJS (`apps/api`) and Next.js 15 App Router (`apps/web`), backed by PostgreSQL via Prisma ORM.
 
 ### Entity Relationship Diagram
 

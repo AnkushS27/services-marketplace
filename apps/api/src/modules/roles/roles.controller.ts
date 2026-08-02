@@ -69,4 +69,10 @@ export class RolesController {
   ) {
     return this.rolesService.assignUserRole(userId, dto);
   }
+
+  @Get('admin/users')
+  @RequirePermissions(PERMISSIONS.ROLE_READ)
+  async getUsers() {
+    return this.rolesService.getAllUsers();
+  }
 }
