@@ -4,7 +4,7 @@ info:
   description: Single source of truth API documentation for Services Marketplace backend.
   version: 1.0.0
 servers:
-  - url: https://services-marketplace-api.onrender.com
+  - url: https://services-marketplace-3k8x.onrender.com
     description: Production Server (Render)
   - url: http://localhost:4000
     description: Local Development Server
