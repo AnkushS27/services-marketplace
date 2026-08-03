@@ -6,7 +6,7 @@ A production-ready, three-sided services marketplace built with NestJS, Next.js 
 
 ## 🌐 Live URLs
 
-- **Frontend Application:** [https://services-marketplace-sigma.vercel.app](https://services-marketplace-sigma.vercel.app) *(or your Vercel deployment URL)*
+- **Frontend Application:** [https://services-marketplace-sigma.vercel.app](https://services-marketplace-sigma.vercel.app)
 - **API Server:** [https://services-marketplace-3k8x.onrender.com](https://services-marketplace-3k8x.onrender.com)
 
 ---
